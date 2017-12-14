@@ -304,8 +304,8 @@ class KVServer : public SimpleApp {
    * \param req_data kv pairs of this request
    * \param server this pointer
    */
-  using ReqHandle = std::function<void(const KVMeta& req_meta,
-                                       const KVPairs<Val>& req_data,
+  using ReqHandle = std::function<void(const std::shared_ptr<KVMeta> req_meta,
+                                       const std::shared_ptr<KVPairs<Val> > req_data,
                                        KVServer* server)>;
   void set_request_handle(const ReqHandle& request_handle) {
     CHECK(request_handle) << "invalid request handle";
@@ -362,25 +362,29 @@ void KVServer<Val>::Process(const Message& msg) {
   if (msg.meta.simple_app) {
     SimpleApp::Process(msg); return;
   }
-  KVMeta meta;
-  meta.cmd       = msg.meta.head;
-  meta.push      = msg.meta.push;
-  meta.sender    = msg.meta.sender;
-  meta.timestamp = msg.meta.timestamp;
-  KVPairs<Val> data;
+//  std::cout<<"started with kvserver process"<<std::endl;
+  std::shared_ptr<KVMeta> meta = std::make_shared<KVMeta>();
+  meta->cmd       = msg.meta.head;
+  meta->push      = msg.meta.push;
+  meta->sender    = msg.meta.sender;
+  meta->timestamp = msg.meta.timestamp;
+  std::shared_ptr<KVPairs<Val> > data = std::make_shared<KVPairs<Val> >();
   int n = msg.data.size();
   if (n) {
     CHECK_GE(n, 2);
-    data.keys = msg.data[0];
-    data.vals = msg.data[1];
+//    std::cout<<"Worked till copyfrom"<<std::endl;
+    data->keys = (msg.data[0]);
+    data->vals= (msg.data[1]);
     if (n > 2) {
       CHECK_EQ(n, 3);
-      data.lens = msg.data[2];
-      CHECK_EQ(data.lens.size(), data.keys.size());
+      data->lens = (msg.data[2]);
+      CHECK_EQ(data->lens.size(), data->keys.size());
     }
   }
   CHECK(request_handle_);
+//  std::cout<<"done with kvserver process"<<std::endl;
   request_handle_(meta, data, this);
+
 }
 
 template <typename Val>
@@ -524,6 +528,7 @@ void KVWorker<Val>::Process(const Message& msg) {
     RunCallback(ts);
   }
 }
+
 template <typename Val>
 void KVWorker<Val>::RunCallback(int timestamp) {
   mu_.lock();

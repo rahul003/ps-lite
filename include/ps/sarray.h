@@ -110,6 +110,20 @@ class SArray {
     memcpy(this->data(), data, size*sizeof(V));
   }
 
+  template <typename W>
+  void CopyFrom(const SArray<W>& arr) {
+
+    SArray<V> s = arr;
+    CopyFrom(s, s.size());
+//    size_ = arr.size() * sizeof(W) / sizeof(V);
+//    CHECK_EQ(size_ * sizeof(V), arr.size() * sizeof(W)) << "cannot be divided";
+//    capacity_ = arr.capacity() * sizeof(W) / sizeof(V);
+//
+    //  ptr_ = std::shared_ptr<V>(arr.ptr(), reinterpret_cast<V*>(arr.data()));
+
+//    memcpy(this->data(), std::shared_ptr<V>(arr.ptr(), reinterpret_cast<V*>(arr.data()))->get(), arr.size()*sizeof(W));
+  }
+
   /**
    * \brief copy from another SArray
    *
