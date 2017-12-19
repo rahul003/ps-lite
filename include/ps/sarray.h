@@ -112,9 +112,8 @@ class SArray {
 
   template <typename W>
   void CopyFrom(const SArray<W>& arr) {
-
     SArray<V> s = arr;
-    CopyFrom(s, s.size());
+    CopyFrom(s.data(), s.size());
 //    size_ = arr.size() * sizeof(W) / sizeof(V);
 //    CHECK_EQ(size_ * sizeof(V), arr.size() * sizeof(W)) << "cannot be divided";
 //    capacity_ = arr.capacity() * sizeof(W) / sizeof(V);
