@@ -16,8 +16,8 @@ Customer::Customer(int id, const Customer::RecvHandle& recv_handle)
 
 Customer::~Customer() {
   Postoffice::Get()->RemoveCustomer(this);
-  Message msg;
-  msg.meta.control.cmd = Control::TERMINATE;
+  std::shared_ptr<Message> msg = std::make_shared<Message>();
+  msg->meta.control.cmd = Control::TERMINATE;
   recv_queue_.Push(msg);
   recv_thread_->join();
 }
@@ -48,16 +48,15 @@ void Customer::AddResponse(int timestamp, int num) {
 
 void Customer::Receiving() {
   while (true) {
-    Message recv;
-    recv_queue_.WaitAndPop(&recv);
-    if (!recv.meta.control.empty() &&
-        recv.meta.control.cmd == Control::TERMINATE) {
+    std::shared_ptr<Message> recv = recv_queue_.WaitAndPop();
+    if (!recv->meta.control.empty() &&
+        recv->meta.control.cmd == Control::TERMINATE) {
       break;
     }
     recv_handle_(recv);
-    if (!recv.meta.request) {
+    if (!recv->meta.request) {
       std::lock_guard<std::mutex> lk(tracker_mu_);
-      tracker_[recv.meta.timestamp].second++;
+      tracker_[recv->meta.timestamp].second++;
       tracker_cond_.notify_all();
     }
   }

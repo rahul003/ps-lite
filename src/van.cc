@@ -144,14 +144,15 @@ void Van::Receiving() {
       = heartbeat_timeout_val ? atoi(heartbeat_timeout_val) : kDefaultHeartbeatInterval;
   Meta nodes;  // for scheduler usage
   while (true) {
-    Message msg;
-    int recv_bytes = RecvMsg(&msg);
+    // NOT TODO RAHUL first creation of this message
+    std::shared_ptr<Message> msg = std::make_shared<Message>();
+    int recv_bytes = RecvMsg(msg);
 
     // For debug, drop received message
     if (ready_ && drop_rate_ > 0) {
       unsigned seed = time(NULL) + my_node_.id;
       if (rand_r(&seed) % 100 < drop_rate_) {
-        LOG(WARNING) << "Drop message " << msg.DebugString();
+        LOG(WARNING) << "Drop message " << msg->DebugString();
         continue;
       }
     }
@@ -159,14 +160,14 @@ void Van::Receiving() {
     CHECK_NE(recv_bytes, -1);
     recv_bytes_ += recv_bytes;
     if (Postoffice::Get()->verbose() >= 2) {
-      PS_VLOG(2) << msg.DebugString();
+      PS_VLOG(2) << msg->DebugString();
     }
     // duplicated message
     if (resender_ && resender_->AddIncomming(msg)) continue;
 
-    if (!msg.meta.control.empty()) {
+    if (!msg->meta.control.empty()) {
       // do some management
-      auto& ctrl = msg.meta.control;
+      auto& ctrl = msg->meta.control;
       if (ctrl.cmd == Control::TERMINATE) {
         PS_VLOG(1) << my_node_.ShortDebugString() << " is stopped";
         ready_ = false;
@@ -179,7 +180,7 @@ void Van::Receiving() {
         Meta recovery_nodes;  // store recovery nodes
         recovery_nodes.control.cmd = Control::ADD_NODE;
         // assign an id
-        if (msg.meta.sender == Meta::kEmpty) {
+        if (msg->meta.sender == Meta::kEmpty) {
           CHECK(is_scheduler_);
           CHECK_EQ(ctrl.node.size(), 1);
           if (nodes.control.node.size() < num_nodes) {
@@ -283,7 +284,7 @@ void Van::Receiving() {
           ready_ = true;
         }
       } else if (ctrl.cmd == Control::BARRIER) {
-        if (msg.meta.request) {
+        if (msg->meta.request) {
           if (barrier_count_.empty()) {
             barrier_count_.resize(8, 0);
           }
@@ -321,10 +322,10 @@ void Van::Receiving() {
         }
       }
     } else {
-      CHECK_NE(msg.meta.sender, Meta::kEmpty);
-      CHECK_NE(msg.meta.recver, Meta::kEmpty);
-      CHECK_NE(msg.meta.customer_id, Meta::kEmpty);
-      int id = msg.meta.customer_id;
+      CHECK_NE(msg->meta.sender, Meta::kEmpty);
+      CHECK_NE(msg->meta.recver, Meta::kEmpty);
+      CHECK_NE(msg->meta.customer_id, Meta::kEmpty);
+      int id = msg->meta.customer_id;
       auto* obj = Postoffice::Get()->GetCustomer(id, 5);
       CHECK(obj) << "timeout (5 sec) to wait App " << id << " ready";
       obj->Accept(msg);

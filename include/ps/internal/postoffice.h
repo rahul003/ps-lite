@@ -144,7 +144,7 @@ class Postoffice {
    * \brief process a control message, called by van
    * \param the received message
    */
-  void Manage(const Message& recv);
+  void Manage(const std::shared_ptr<Message> recv);
   /**
    * \brief update the heartbeat record map
    * \param node_id the \ref Node id

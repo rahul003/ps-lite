@@ -106,7 +106,7 @@ class SimpleApp {
   }
 
   /** \brief process a received message */
-  virtual inline void Process(const Message& msg);
+  virtual inline void Process(const std::shared_ptr<Message> msg);
 
   /** \brief ps internal object */
   Customer* obj_;
@@ -160,13 +160,13 @@ inline void SimpleApp::Response(const SimpleData& req, const std::string& res_bo
 }
 
 
-inline void SimpleApp::Process(const Message& msg) {
+inline void SimpleApp::Process(const std::shared_ptr<Message> msg) {
   SimpleData recv;
-  recv.sender    = msg.meta.sender;
-  recv.head      = msg.meta.head;
-  recv.body      = msg.meta.body;
-  recv.timestamp = msg.meta.timestamp;
-  if (msg.meta.request) {
+  recv.sender    = msg->meta.sender;
+  recv.head      = msg->meta.head;
+  recv.body      = msg->meta.body;
+  recv.timestamp = msg->meta.timestamp;
+  if (msg->meta.request) {
     CHECK(request_handle_);
     request_handle_(recv, this);
   } else {

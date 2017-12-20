@@ -29,7 +29,7 @@ class Customer {
    * \brief the handle for a received message
    * \param recved the received message
    */
-  using RecvHandle = std::function<void(const Message& recved)>;
+  using RecvHandle = std::function<void(const std::shared_ptr<Message> recved)>;
 
   /**
    * \brief constructor
@@ -77,7 +77,7 @@ class Customer {
    * \brief accept a received message from \ref Van. threadsafe
    * \param recved the received the message
    */
-  void Accept(const Message& recved) { recv_queue_.Push(recved); }
+  void Accept(const std::shared_ptr<Message> recved) { recv_queue_.Push(recved); }
 
  private:
   /**

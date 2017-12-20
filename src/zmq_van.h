@@ -164,7 +164,7 @@ class ZMQVan : public Van {
     return send_bytes;
   }
 
-  int RecvMsg(Message* msg) override {
+  int RecvMsg(std::shared_ptr<Message> msg) override {
     msg->data.clear();
     size_t recv_bytes = 0;
     for (int i = 0; ; ++i) {

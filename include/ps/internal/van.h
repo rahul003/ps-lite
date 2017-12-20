@@ -85,7 +85,7 @@ class Van {
    * \brief block until received a message
    * \return the number of bytes received. -1 if failed or timeout
    */
-  virtual int RecvMsg(Message* msg) = 0;
+  virtual int RecvMsg(std::shared_ptr<Message> msg) = 0;
   /**
    * \brief send a mesage
    * \return the number of bytes sent

@@ -22,27 +22,36 @@ template<typename T> class ThreadsafeQueue {
    * \brief push an value into the end. threadsafe.
    * \param new_value the value
    */
-  void Push(T new_value) {
+  void Push(std::shared_ptr<T> new_value) {
     mu_.lock();
-    queue_.push(std::move(new_value));
+    queue_.push(new_value);
     mu_.unlock();
     cond_.notify_all();
   }
 
-  /**
-   * \brief wait until pop an element from the beginning, threadsafe
-   * \param value the poped value
-   */
-  void WaitAndPop(T* value) {
+//  /**
+//   * \brief wait until pop an element from the beginning, threadsafe
+//   * \param value the poped value
+//   */
+//  void WaitAndPop(T* value) {
+//      std::unique_lock<std::mutex> lk(mu_);
+//      cond_.wait(lk, [this]{return !queue_.empty();});
+//      *value = std::move(queue_.front());
+//      queue_.pop();
+//    }
+
+  std::shared_ptr<T> WaitAndPop() {
+    std::shared_ptr<T> value;
     std::unique_lock<std::mutex> lk(mu_);
     cond_.wait(lk, [this]{return !queue_.empty();});
-    *value = std::move(queue_.front());
+    value = queue_.front();
     queue_.pop();
+    return value;
   }
 
  private:
   mutable std::mutex mu_;
-  std::queue<T> queue_;
+  std::queue<std::shared_ptr<T> > queue_;
   std::condition_variable cond_;
 };
 

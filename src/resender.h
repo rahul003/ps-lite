@@ -51,33 +51,33 @@ class Resender {
    * \brief add an incomming message
    * \brief return true if msg has been added before or a ACK message
    */
-  bool AddIncomming(const Message& msg) {
+  bool AddIncomming(const std::shared_ptr<Message> msg) {
     // a message can be received by multiple times
-    if (msg.meta.control.cmd == Control::TERMINATE) {
+    if (msg->meta.control.cmd == Control::TERMINATE) {
       return false;
-    } else if (msg.meta.control.cmd == Control::ACK) {
+    } else if (msg->meta.control.cmd == Control::ACK) {
       mu_.lock();
-      auto key = msg.meta.control.msg_sig;
+      auto key = msg->meta.control.msg_sig;
       auto it = send_buff_.find(key);
       if (it != send_buff_.end()) send_buff_.erase(it);
       mu_.unlock();
       return true;
     } else {
       mu_.lock();
-      auto key = GetKey(msg);
+      auto key = GetKey(*msg);
       auto it = acked_.find(key);
       bool duplicated = it != acked_.end();
       if (!duplicated) acked_.insert(key);
       mu_.unlock();
       // send back ack message (even if it is duplicated)
       Message ack;
-      ack.meta.recver = msg.meta.sender;
-      ack.meta.sender = msg.meta.recver;
+      ack.meta.recver = msg->meta.sender;
+      ack.meta.sender = msg->meta.recver;
       ack.meta.control.cmd = Control::ACK;
       ack.meta.control.msg_sig = key;
       van_->Send(ack);
       // warning
-      if (duplicated) LOG(WARNING) << "Duplicated message: " << msg.DebugString();
+      if (duplicated) LOG(WARNING) << "Duplicated message: " << msg->DebugString();
       return duplicated;
     }
   }

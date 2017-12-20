@@ -142,10 +142,10 @@ const std::vector<Range>& Postoffice::GetServerKeyRanges() {
   return server_key_ranges_;
 }
 
-void Postoffice::Manage(const Message& recv) {
-  CHECK(!recv.meta.control.empty());
-  const auto& ctrl = recv.meta.control;
-  if (ctrl.cmd == Control::BARRIER && !recv.meta.request) {
+void Postoffice::Manage(const std::shared_ptr<Message> recv) {
+  CHECK(!recv->meta.control.empty());
+  const auto& ctrl = recv->meta.control;
+  if (ctrl.cmd == Control::BARRIER && !recv->meta.request) {
     barrier_mu_.lock();
     barrier_done_ = true;
     barrier_mu_.unlock();

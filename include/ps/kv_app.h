@@ -252,7 +252,7 @@ class KVWorker : public SimpleApp {
    */
   void Send(int timestamp, bool push, int cmd, const KVPairs<Val>& kvs);
   /** \brief internal receive handle */
-  void Process(const Message& msg);
+  void Process(const std::shared_ptr<Message> msg);
   /** \brief default kv slicer */
   void DefaultSlicer(const KVPairs<Val>& send,
                      const std::vector<Range>& ranges,
@@ -304,8 +304,9 @@ class KVServer : public SimpleApp {
    * \param req_data kv pairs of this request
    * \param server this pointer
    */
-  using ReqHandle = std::function<void(const std::shared_ptr<KVMeta> req_meta,
-                                       const std::shared_ptr<KVPairs<Val> > req_data,
+  using ReqHandle = std::function<void(const std::shared_ptr<Message> msg,
+                                       const KVMeta& req_meta,
+                                       const KVPairs<Val>& req_data,
                                        KVServer* server)>;
   void set_request_handle(const ReqHandle& request_handle) {
     CHECK(request_handle) << "invalid request handle";
@@ -321,9 +322,10 @@ class KVServer : public SimpleApp {
 
  private:
   /** \brief internal receive handle */
-  void Process(const Message& msg);
+  void Process(const std::shared_ptr<Message> msg);
   /** \brief request handle */
   ReqHandle request_handle_;
+  /** \brief buffer to remember shared_ptr of request so that we can retain till all processing on it is done */
 };
 
 
@@ -358,33 +360,29 @@ struct KVServerDefaultHandle {
 ///////////////////////////////////////////////////////////////////////////////
 
 template <typename Val>
-void KVServer<Val>::Process(const Message& msg) {
-  if (msg.meta.simple_app) {
+void KVServer<Val>::Process(const std::shared_ptr<Message> msg) {
+  if (msg->meta.simple_app) {
     SimpleApp::Process(msg); return;
   }
-  std::cout<<"started with kvserver process"<<std::endl;
-  std::shared_ptr<KVMeta> meta = std::make_shared<KVMeta>();
-  meta->cmd       = msg.meta.head;
-  meta->push      = msg.meta.push;
-  meta->sender    = msg.meta.sender;
-  meta->timestamp = msg.meta.timestamp;
-  std::shared_ptr<KVPairs<Val> > data = std::make_shared<KVPairs<Val> >();
-  int n = msg.data.size();
+  KVMeta meta;
+  meta.cmd       = msg->meta.head;
+  meta.push      = msg->meta.push;
+  meta.sender    = msg->meta.sender;
+  meta.timestamp = msg->meta.timestamp;
+  KVPairs<Val> data;
+  int n = msg->data.size();
   if (n) {
     CHECK_GE(n, 2);
-    std::cout<<"Worked till copyfrom"<<std::endl;
-    data->keys.CopyFrom(msg.data[0]);
-    data->vals.CopyFrom(msg.data[1]);
+    data.keys = msg->data[0];
+    data.vals = msg->data[1];
     if (n > 2) {
       CHECK_EQ(n, 3);
-      data->lens.CopyFrom(msg.data[2]);
-      CHECK_EQ(data->lens.size(), data->keys.size());
+      data.lens = msg->data[2];
+      CHECK_EQ(data.lens.size(), data.keys.size());
     }
   }
   CHECK(request_handle_);
-  std::cout<<"done with kvserver process"<<std::endl;
-  request_handle_(meta, data, this);
-
+  request_handle_(msg, meta, data, this);
 }
 
 template <typename Val>
@@ -404,6 +402,7 @@ void KVServer<Val>::Response(const KVMeta& req, const KVPairs<Val>& res) {
     }
   }
   Postoffice::Get()->van()->Send(msg);
+
 }
 
 template <typename Val>
@@ -503,20 +502,20 @@ void KVWorker<Val>::Send(int timestamp, bool push, int cmd, const KVPairs<Val>& 
 
 
 template <typename Val>
-void KVWorker<Val>::Process(const Message& msg) {
-  if (msg.meta.simple_app) {
+void KVWorker<Val>::Process(const std::shared_ptr<Message> msg) {
+  if (msg->meta.simple_app) {
     SimpleApp::Process(msg); return;
   }
 
   // store the data for pulling
-  int ts = msg.meta.timestamp;
-  if (!msg.meta.push && msg.data.size()) {
-    CHECK_GE(msg.data.size(), (size_t)2);
+  int ts = msg->meta.timestamp;
+  if (!msg->meta.push && msg->data.size()) {
+    CHECK_GE(msg->data.size(), (size_t)2);
     KVPairs<Val> kvs;
-    kvs.keys = msg.data[0];
-    kvs.vals = msg.data[1];
-    if (msg.data.size() > (size_t)2) {
-      kvs.lens = msg.data[2];
+    kvs.keys = msg->data[0];
+    kvs.vals = msg->data[1];
+    if (msg->data.size() > (size_t)2) {
+      kvs.lens = msg->data[2];
     }
     mu_.lock();
     recv_kvs_[ts].push_back(kvs);
