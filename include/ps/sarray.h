@@ -116,7 +116,7 @@ class SArray {
     size_t new_size = arr.size() * sizeof(W) / sizeof(V);
     resize(new_size);
     capacity_ = arr.capacity() * sizeof(W) / sizeof(V);
-    memcpy(this->data(), reinterpret_cast<V*>(arr.data()), new_size);
+    memcpy(this->data(), reinterpret_cast<V*>(arr.data()), sizeof(W) * arr.size());
 
 //    const SArray<V> s = arr;
 //    CopyFrom(reinterpret_cast<V>(s.data()), s.size());
